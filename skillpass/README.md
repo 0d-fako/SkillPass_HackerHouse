@@ -5,11 +5,11 @@
 
 ```typescript
 export const CONTRACT_CONFIG = {
-  PACKAGE_ID: "0x86d3de7d2236b8158edee702a9e4cde816242c57b25e4e4e9a759dadd6ac9e00", // ✅ DEPLOYED!
-  REGISTRY_ID: "0xfda14bfe14d6bfc474eaa2245c3cb75b4cb62b579d837091af4b32984e635d6d", // ✅ DEPLOYED!
-  NETWORK: "https://fullnode.testnet.sui.io:443", // ✅ TESTNET
+  PACKAGE_ID: "0x86d3de7d2236b8158edee702a9e4cde816242c57b25e4e4e9a759dadd6ac9e00", // 
+  REGISTRY_ID: "0xfda14bfe14d6bfc474eaa2245c3cb75b4cb62b579d837091af4b32984e635d6d", // 
+  NETWORK: "https://fullnode.testnet.sui.io:443", 
   MODULE_NAME: "skillpass::certificate_registry",
-  ADMIN_ADDRESS: "0x83b3e15b0f43aacdbd39ede604391ef9720df83b33420fb72deef7f8e795cbe9" // ✅ DEPLOYED!
+  ADMIN_ADDRESS: "0x83b3e15b0f43aacdbd39ede604391ef9720df83b33420fb72deef7f8e795cbe9" 
 };
 ```
 
