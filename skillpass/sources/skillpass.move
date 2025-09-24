@@ -208,4 +208,105 @@ module skillpass::certificate_registry {
     public fun get_grade(cert: &Certificate): Option<vector<u8>> {
         cert.grade
     }
+
+    // Query functions for better frontend integration
+    
+    // Check if an address is admin
+    public fun is_admin(registry: &CertificateRegistry, addr: address): bool {
+        registry.admin == addr
+    }
+
+    // Get admin address
+    public fun get_admin(registry: &CertificateRegistry): address {
+        registry.admin
+    }
+
+    // Get certificate issue date
+    public fun get_issue_date(cert: &Certificate): u64 {
+        cert.issue_date
+    }
+
+    // Get certificate student address
+    public fun get_student_address(cert: &Certificate): address {
+        cert.student_address
+    }
+
+    // Get certificate university
+    public fun get_university(cert: &Certificate): address {
+        cert.university
+    }
+
+    // Get certificate type
+    public fun get_credential_type(cert: &Certificate): vector<u8> {
+        cert.credential_type
+    }
+
+    // Check if certificate is valid
+    public fun is_certificate_valid(cert: &Certificate): bool {
+        cert.is_valid
+    }
+
+    // Get certificate ID
+    public fun get_certificate_id(cert: &Certificate): object::ID {
+        object::uid_to_inner(&cert.id)
+    }
+
+    // Batch operations for efficiency
+    
+    // Add multiple universities at once (admin only)
+    public fun add_universities(
+        registry: &mut CertificateRegistry,
+        university_addresses: vector<address>,
+        ctx: &mut TxContext
+    ) {
+        assert!(tx_context::sender(ctx) == registry.admin, ENotAuthorized);
+        let mut i = 0;
+        let len = vector::length(&university_addresses);
+        while (i < len) {
+            let addr = *vector::borrow(&university_addresses, i);
+            if (!table::contains(&registry.authorized_universities, addr)) {
+                table::add(&mut registry.authorized_universities, addr, true);
+            };
+            i = i + 1;
+        };
+    }
+
+    // Remove university authorization (admin only)
+    public fun remove_university(
+        registry: &mut CertificateRegistry,
+        university_address: address,
+        ctx: &mut TxContext
+    ) {
+        assert!(tx_context::sender(ctx) == registry.admin, ENotAuthorized);
+        if (table::contains(&registry.authorized_universities, university_address)) {
+            table::remove(&mut registry.authorized_universities, university_address);
+        };
+    }
+
+    // Update certificate grade (issuing university only)
+    public fun update_certificate_grade(
+        cert: &mut Certificate,
+        new_grade: Option<vector<u8>>,
+        ctx: &mut TxContext
+    ) {
+        let sender = tx_context::sender(ctx);
+        assert!(sender == cert.university, ENotAuthorizedUniversity);
+        assert!(cert.is_valid, EInvalidCertificate);
+        
+        cert.grade = new_grade;
+    }
+
+    // Add evidence to existing certificate (issuing university only)
+    public fun add_evidence_to_certificate(
+        cert: &mut Certificate,
+        evidence_blob_id: vector<u8>,
+        ctx: &mut TxContext
+    ) {
+        let sender = tx_context::sender(ctx);
+        assert!(sender == cert.university, ENotAuthorizedUniversity);
+        assert!(cert.is_valid, EInvalidCertificate);
+        assert!(!vector::is_empty(&evidence_blob_id), EInvalidEvidence);
+        
+        cert.walrus_evidence_blob = option::some(evidence_blob_id);
+    }
 }
