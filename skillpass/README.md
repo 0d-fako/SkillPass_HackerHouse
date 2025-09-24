@@ -1,15 +1,24 @@
 # SkillPass Smart Contract API Documentation
+# SkillPass Smart Contract API Documentation - ✅ **DEPLOYED ON TESTNET**
 
 ## Contract Deployment Information
 
 ```typescript
 export const CONTRACT_CONFIG = {
-  PACKAGE_ID: "0x...", // Update after deployment
-  REGISTRY_ID: "0x...", // Update after deployment  
-  NETWORK: "https://fullnode.testnet.sui.io:443",
-  MODULE_NAME: "skillpass::certificate_registry"
+  PACKAGE_ID: "0x86d3de7d2236b8158edee702a9e4cde816242c57b25e4e4e9a759dadd6ac9e00", // ✅ DEPLOYED!
+  REGISTRY_ID: "0xfda14bfe14d6bfc474eaa2245c3cb75b4cb62b579d837091af4b32984e635d6d", // ✅ DEPLOYED!
+  NETWORK: "https://fullnode.testnet.sui.io:443", // ✅ TESTNET
+  MODULE_NAME: "skillpass::certificate_registry",
+  ADMIN_ADDRESS: "0x83b3e15b0f43aacdbd39ede604391ef9720df83b33420fb72deef7f8e795cbe9" // ✅ DEPLOYED!
 };
 ```
+
+### 🚀 **Deployment Status:**
+- **Package ID**: ✅ Deployed
+- **Registry**: ✅ Created and Shared
+- **Network**: ✅ Sui Testnet
+- **Admin**: ✅ Set (Your Address)
+- **Status**: 🔥 **LIVE AND READY FOR USE!**
 
 ## Data Structures
 
@@ -376,7 +385,7 @@ interface VerificationResult {
 
 ---
 
-## Individual Query Functions - NEW!
+## Individual Query Functions !
 
 ### Administrative Queries
 
@@ -724,17 +733,14 @@ export const TEST_DATA = {
 - [ ] Event subscription tested
 - [ ] Error handling patterns documented
 - [ ] All function examples tested with actual contract
-- [x] **COMPLETE:** Individual query functions fully documented (8 functions)
-- [x] **COMPLETE:** Administrative query functions documented (2 functions)
-- [x] **COMPLETE:** Batch operations documented and verified (2 functions)
-- [x] **COMPLETE:** Certificate update functions documented and tested (2 functions)
-- [x] **COMPLETE:** All error codes documented (5 error types)
-- [x] **COMPLETE:** Complete frontend integration examples provided
-- [x] **COMPLETE:** 25 comprehensive tests implemented (176% increase)
+- [ ] Individual query functions fully documented (8 functions)
+- [ ] Administrative query functions documented (2 functions)
+- [ ] Batch operations documented and verified (2 functions)
+- [ ] Certificate update functions documented and tested (2 functions)
 
-## Recent Updates - v2.1 COMPLETE
 
-### ✅ **All Functions Now Documented (16 total):**
+
+### ✅ **All Functions(16 total):**
 
 1. **Core Functions (7):**
    - `create_registry()` - Initialize system
