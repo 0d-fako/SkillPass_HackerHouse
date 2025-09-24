@@ -78,7 +78,7 @@ sui client call \
 4. **SEAL Operations**: Implement homomorphic operations on encrypted data
 5. **Access Control**: Test decryption permissions with different users
 
-## Files Created/Updated
+## Files Created/
 - ✅ `test-certificate-minting.js` - Simplified minting functions
 - ✅ `mint-certificate-cli.ps1` - PowerShell minting script
 - ✅ `verify-certificate.ps1` - Certificate verification script
