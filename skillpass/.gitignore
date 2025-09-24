@@ -1,1 +1,13 @@
 build/*
+.node_modules/*
+.vscode/*
+.idea/*
+.git/*
+.DS_Store
+.gitignore
+.gitattributes
+.gitkeep
+.gitmodules
+.gitignore
+.gitattributes
+.gitkeep

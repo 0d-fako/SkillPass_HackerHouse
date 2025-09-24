@@ -1,5 +1,5 @@
 // TypeScript test for certificate minting
-import { TransactionBlock } from '@mysten/sui.js/transactions';
+import { Transaction } from '@mysten/sui/transactions';
 
 // Contract configuration
 const PACKAGE_ID = "0xf1cb82954194f281b4bcddee3b8922b81322cd742d2ab23d169dfaf11883c736";
@@ -8,7 +8,7 @@ const ADMIN_ADDRESS = "0x83b3e15b0f43aacdbd39ede604391ef9720df83b33420fb72deef7f
 
 // Test function to mint certificate
 export function createMintCertificateTransaction() {
-  const tx = new TransactionBlock();
+  const tx = new Transaction();
   
   // Convert strings to byte arrays
   const credentialType = Array.from(Buffer.from("Bachelor of Computer Science", 'utf8'));
@@ -18,9 +18,9 @@ export function createMintCertificateTransaction() {
     target: `${PACKAGE_ID}::certificate_registry::mint_certificate`,
     arguments: [
       tx.object(REGISTRY_ID),                    // registry
-      tx.pure(ADMIN_ADDRESS),                    // student_address
-      tx.pure(credentialType),                   // credential_type: vector<u8>
-      tx.pure([grade]),                          // grade: Option<vector<u8>> - Some case
+      tx.pure.address(ADMIN_ADDRESS),            // student_address
+      tx.pure.vector('u8', credentialType),      // credential_type: vector<u8>
+      tx.pure.option('vector<u8>', grade),       // grade: Option<vector<u8>> - Some case
       tx.object('0x6')                           // clock
     ]
   });
@@ -30,7 +30,7 @@ export function createMintCertificateTransaction() {
 
 // Test function for certificate without grade
 export function createMintCertificateNoGradeTransaction() {
-  const tx = new TransactionBlock();
+  const tx = new Transaction();
   
   const credentialType = Array.from(Buffer.from("Bachelor of Computer Science", 'utf8'));
   
@@ -38,9 +38,9 @@ export function createMintCertificateNoGradeTransaction() {
     target: `${PACKAGE_ID}::certificate_registry::mint_certificate`,
     arguments: [
       tx.object(REGISTRY_ID),                    // registry
-      tx.pure(ADMIN_ADDRESS),                    // student_address  
-      tx.pure(credentialType),                   // credential_type: vector<u8>
-      tx.pure([]),                               // grade: Option<vector<u8>> - None case
+      tx.pure.address(ADMIN_ADDRESS),            // student_address  
+      tx.pure.vector('u8', credentialType),      // credential_type: vector<u8>
+      tx.pure.option('vector<u8>', null),        // grade: Option<vector<u8>> - None case
       tx.object('0x6')                           // clock
     ]
   });

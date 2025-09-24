@@ -1,0 +1,22 @@
+{
+  "name": "skillpass",
+  "version": "1.0.0",
+  "description": "```typescript\r export const CONTRACT_CONFIG = {\r   PACKAGE_ID: \"0xf1cb82954194f281b4bcddee3b8922b81322cd742d2ab23d169dfaf11883c736\", // SEAL Enhanced\r   REGISTRY_ID: \"0x6c0bab54d2c4ba3caba62063cb7e972370e60deb9dbbe2fd46f825897bde0bdd\", // New Registry\r   NETWORK: \"https://fullnode.testnet.sui.io:443\", \r   MODULE_NAME: \"skillpass::certificate_registry\",\r   ADMIN_ADDRESS: \"0x83b3e15b0f43aacdbd39ede604391ef9720df83b33420fb72deef7f8e795cbe9\" \r };\r ```",
+  "main": "test-certificate-minting.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test:ts": "tsc --noEmit --skipLibCheck test-mint-certificate.ts",
+    "test": "node test-certificate-minting.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@mysten/sui": "^1.38.0",
+    "@types/node": "^24.5.2",
+    "typescript": "^5.9.2"
+  }
+}
