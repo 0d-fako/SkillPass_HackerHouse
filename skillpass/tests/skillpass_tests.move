@@ -17,6 +17,14 @@ module skillpass::certificate_registry_tests {
     const CREDENTIAL_TYPE: vector<u8> = b"Bachelor of Science in Computer Science";
     const GRADE: vector<u8> = b"First Class";
     const WALRUS_BLOB_ID: vector<u8> = b"walrus_blob_12345";
+    
+    // SEAL test data
+    const ENCRYPTED_CREDENTIAL_TYPE: vector<u8> = b"encrypted_credential_type_data_sample";
+    const ENCRYPTED_GRADE: vector<u8> = b"encrypted_grade_data_sample";
+    const ENCRYPTION_PARAMS: vector<u8> = b"seal_encryption_parameters_sample";
+    const PUBLIC_KEY_HASH: vector<u8> = b"public_key_hash_sample_32_bytes_";
+    const ACCESS_POLICY: vector<u8> = b"[\"0xSTUDENT\",\"0xUNIVERSITY\"]";
+    const ACCESS_PROOF: vector<u8> = b"cryptographic_access_proof_sample";
 
     #[test]
     fun test_create_registry() {
@@ -837,5 +845,248 @@ module skillpass::certificate_registry_tests {
         };
 
         test_scenario::end(scenario_val);
+    }
+
+    // =============================================================================
+    // SEAL ENCRYPTION TESTS
+    // =============================================================================
+
+    #[test]
+    fun test_mint_encrypted_certificate_by_authorized_university() {
+        let mut scenario_val = test_scenario::begin(ADMIN);
+        let scenario = &mut scenario_val;
+
+        // GIVEN: Registry with authorized university
+        setup_registry_with_university(scenario);
+
+        // WHEN: University mints encrypted certificate
+        next_tx(scenario, UNIVERSITY);
+        {
+            let mut registry = test_scenario::take_shared<CertificateRegistry>(scenario);
+            let clock = clock::create_for_testing(ctx(scenario));
+            certificate_registry::mint_encrypted_certificate(
+                &mut registry,
+                STUDENT,
+                ENCRYPTED_CREDENTIAL_TYPE,
+                option::some(ENCRYPTED_GRADE),
+                ENCRYPTION_PARAMS,
+                PUBLIC_KEY_HASH,
+                ACCESS_POLICY,
+                &clock,
+                ctx(scenario)
+            );
+            clock::destroy_for_testing(clock);
+            test_scenario::return_shared(registry);
+        };
+
+        // THEN: Encrypted certificate should be created and owned by student
+        next_tx(scenario, STUDENT);
+        {
+            let certificate = test_scenario::take_from_sender<Certificate>(scenario);
+            let (student_addr, university_addr, issue_date, is_valid, pub_key_hash) = 
+                certificate_registry::get_certificate_metadata(&certificate);
+            
+            assert!(student_addr == STUDENT, 0);
+            assert!(university_addr == UNIVERSITY, 1);
+            assert!(is_valid == true, 2);
+            assert!(pub_key_hash == PUBLIC_KEY_HASH, 3);
+            assert!(issue_date >= 0, 4);
+            
+            test_scenario::return_to_sender(scenario, certificate);
+        };
+
+        // AND: Registry total should increment
+        next_tx(scenario, ADMIN);
+        {
+            let registry = test_scenario::take_shared<CertificateRegistry>(scenario);
+            assert!(certificate_registry::get_total_certificates(&registry) == 1, 5);
+            test_scenario::return_shared(registry);
+        };
+
+        test_scenario::end(scenario_val);
+    }
+
+    #[test]
+    fun test_get_encrypted_certificate_data() {
+        let mut scenario_val = test_scenario::begin(ADMIN);
+        let scenario = &mut scenario_val;
+
+        // GIVEN: Encrypted certificate exists
+        setup_encrypted_certificate(scenario);
+
+        // WHEN & THEN: Anyone can get encrypted data (but cannot decrypt without key)
+        next_tx(scenario, @0xE); // Random verifier address
+        {
+            let certificate = test_scenario::take_from_address<Certificate>(scenario, STUDENT);
+            let (
+                encrypted_cred_type,
+                encrypted_grade_opt,
+                encryption_params,
+                public_key_hash,
+                access_policy
+            ) = certificate_registry::get_encrypted_certificate_data(&certificate);
+
+            // THEN: Should return encrypted data
+            assert!(encrypted_cred_type == ENCRYPTED_CREDENTIAL_TYPE, 0);
+            assert!(option::is_some(&encrypted_grade_opt), 1);
+            assert!(*option::borrow(&encrypted_grade_opt) == ENCRYPTED_GRADE, 2);
+            assert!(encryption_params == ENCRYPTION_PARAMS, 3);
+            assert!(public_key_hash == PUBLIC_KEY_HASH, 4);
+            assert!(access_policy == ACCESS_POLICY, 5);
+
+            test_scenario::return_to_address(STUDENT, certificate);
+        };
+
+        test_scenario::end(scenario_val);
+    }
+
+    #[test]
+    fun test_verify_decryption_access_for_student() {
+        let mut scenario_val = test_scenario::begin(ADMIN);
+        let scenario = &mut scenario_val;
+
+        // GIVEN: Encrypted certificate exists
+        setup_encrypted_certificate(scenario);
+
+        // WHEN: Student verifies access to their certificate
+        next_tx(scenario, STUDENT);
+        {
+            let certificate = test_scenario::take_from_sender<Certificate>(scenario);
+            let has_access = certificate_registry::verify_decryption_access(
+                &certificate,
+                STUDENT,
+                ACCESS_PROOF,
+                ctx(scenario)
+            );
+
+            // THEN: Student should have access
+            assert!(has_access == true, 0);
+
+            test_scenario::return_to_sender(scenario, certificate);
+        };
+
+        test_scenario::end(scenario_val);
+    }
+
+    #[test]
+    fun test_verify_decryption_access_for_university() {
+        let mut scenario_val = test_scenario::begin(ADMIN);
+        let scenario = &mut scenario_val;
+
+        // GIVEN: Encrypted certificate exists
+        setup_encrypted_certificate(scenario);
+
+        // WHEN: University verifies access to certificate they issued
+        next_tx(scenario, UNIVERSITY);
+        {
+            let certificate = test_scenario::take_from_address<Certificate>(scenario, STUDENT);
+            let has_access = certificate_registry::verify_decryption_access(
+                &certificate,
+                UNIVERSITY,
+                ACCESS_PROOF,
+                ctx(scenario)
+            );
+
+            // THEN: University should have access
+            assert!(has_access == true, 0);
+
+            test_scenario::return_to_address(STUDENT, certificate);
+        };
+
+        test_scenario::end(scenario_val);
+    }
+
+    #[test]
+    fun test_verify_decryption_access_denied_for_unauthorized() {
+        let mut scenario_val = test_scenario::begin(ADMIN);
+        let scenario = &mut scenario_val;
+
+        // GIVEN: Encrypted certificate exists
+        setup_encrypted_certificate(scenario);
+
+        // WHEN: Unauthorized user tries to verify access
+        next_tx(scenario, OTHER_UNIVERSITY);
+        {
+            let certificate = test_scenario::take_from_address<Certificate>(scenario, STUDENT);
+            let has_access = certificate_registry::verify_decryption_access(
+                &certificate,
+                OTHER_UNIVERSITY,
+                ACCESS_PROOF,
+                ctx(scenario)
+            );
+
+            // THEN: Access should be denied
+            assert!(has_access == false, 0);
+
+            test_scenario::return_to_address(STUDENT, certificate);
+        };
+
+        test_scenario::end(scenario_val);
+    }
+
+    #[test]
+    fun test_update_access_policy_by_university() {
+        let mut scenario_val = test_scenario::begin(ADMIN);
+        let scenario = &mut scenario_val;
+
+        // GIVEN: Encrypted certificate exists
+        setup_encrypted_certificate(scenario);
+
+        // WHEN: University updates access policy
+        next_tx(scenario, UNIVERSITY);
+        {
+            let mut certificate = test_scenario::take_from_address<Certificate>(scenario, STUDENT);
+            let new_policy = b"[\"0xSTUDENT\",\"0xUNIVERSITY\",\"0xVERIFIER\"]";
+            certificate_registry::update_access_policy(
+                &mut certificate,
+                new_policy,
+                ctx(scenario)
+            );
+            test_scenario::return_to_address(STUDENT, certificate);
+        };
+
+        // THEN: Access policy should be updated
+        next_tx(scenario, STUDENT);
+        {
+            let certificate = test_scenario::take_from_sender<Certificate>(scenario);
+            let (
+                _,
+                _,
+                _,
+                _,
+                access_policy
+            ) = certificate_registry::get_encrypted_certificate_data(&certificate);
+            
+            let expected_policy = b"[\"0xSTUDENT\",\"0xUNIVERSITY\",\"0xVERIFIER\"]";
+            assert!(access_policy == expected_policy, 0);
+            
+            test_scenario::return_to_sender(scenario, certificate);
+        };
+
+        test_scenario::end(scenario_val);
+    }
+
+    // SEAL-specific helper function
+    fun setup_encrypted_certificate(scenario: &mut Scenario) {
+        setup_registry_with_university(scenario);
+
+        next_tx(scenario, UNIVERSITY);
+        {
+            let mut registry = test_scenario::take_shared<CertificateRegistry>(scenario);
+            let clock = clock::create_for_testing(ctx(scenario));
+            certificate_registry::mint_encrypted_certificate(
+                &mut registry,
+                STUDENT,
+                ENCRYPTED_CREDENTIAL_TYPE,
+                option::some(ENCRYPTED_GRADE),
+                ENCRYPTION_PARAMS,
+                PUBLIC_KEY_HASH,
+                ACCESS_POLICY,
+                &clock,
+                ctx(scenario)
+            );
+            clock::destroy_for_testing(clock);
+            test_scenario::return_shared(registry);
+        };
     }
 }
