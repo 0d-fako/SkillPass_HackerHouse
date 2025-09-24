@@ -8,9 +8,9 @@
   },
   "scripts": {
     "build": "tsc --skipLibCheck",
-    "test:ts": "tsc --noEmit --skipLibCheck test-mint-certificate.ts",
-    "test:ts-full": "tsc --skipLibCheck test-typescript-functions.ts && node test-typescript-functions.js",
-    "test": "node test-certificate-minting.js"
+    "typecheck": "tsc --noEmit --skipLibCheck",
+    "test": "node test-certificate-minting.js",
+    "clean": "rm -rf dist/ *.js *.d.ts *.js.map"
   },
   "keywords": [],
   "author": "",
