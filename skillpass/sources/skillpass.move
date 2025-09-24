@@ -1,49 +1,211 @@
-module skillpass::skillpass {
+// sources/certificate_registry.move
+module skillpass::certificate_registry {
     use sui::object::{Self, UID};
-    use sui::tx_context::{tx_context, TxContext};
     use sui::transfer;
-    use sui::dynamic_field as df;
-    use sui::vec_map::{Self, VecMap};
-    use sui::event;
+    use sui::tx_context::{Self, TxContext};
+    use sui::table::{Self, Table};
+    use sui::clock;
+    use std::option::{Self, Option};
+    use std::vector;
 
-    // Public registry struct
-    public struct IssuerRegistry has key {
+    // Error codes
+    const ENotAuthorized: u64 = 1;
+    const ENotAuthorizedUniversity: u64 = 2;
+    const EInvalidCertificate: u64 = 3;
+    const EInvalidEvidence: u64 = 4;
+    const ECertificateNotFound: u64 = 5;
+
+    // Main certificate object
+    public struct Certificate has key, store {
+        id: UID,
+        student_address: address,
+        university: address,
+        credential_type: vector<u8>,
+        issue_date: u64,
+        walrus_evidence_blob: Option<vector<u8>>,
+        is_valid: bool,
+        grade: Option<vector<u8>>,
+    }
+
+    // Registry to manage universities and certificates
+    public struct CertificateRegistry has key {
         id: UID,
         admin: address,
-        issuers: VecMap<address, vector<u8>>,  // addr -> metadata
+        total_certificates: u64,
+        authorized_universities: Table<address, bool>,
     }
 
-    // Public event struct
-    public struct NewIssuerAdded has copy, drop {
-        addr: address,
-        metadata: vector<u8>,
+    // Events
+    public struct CertificateIssued has copy, drop {
+        certificate_id: object::ID,
+        student: address,
+        university: address,
+        credential_type: vector<u8>,
     }
 
-    public fun create_registry(admin: address, ctx: &mut TxContext) {
-        let registry = IssuerRegistry {
+    public struct CertificateRevoked has copy, drop {
+        certificate_id: object::ID,
+        university: address,
+        reason: vector<u8>,
+    }
+
+    // Initialize registry (called once)
+    public fun create_registry(ctx: &mut TxContext) {
+        let registry = CertificateRegistry {
             id: object::new(ctx),
-            admin,
-            issuers: vec_map::empty(),
+            admin: tx_context::sender(ctx),
+            total_certificates: 0,
+            authorized_universities: table::new(ctx),
         };
         transfer::share_object(registry);
     }
 
-    public entry fun add_issuer(registry: &mut IssuerRegistry, new_addr: address, metadata: vector<u8>, ctx: &mut TxContext) {
+    // Add university as authorized issuer (admin only)
+    public fun add_university(
+        registry: &mut CertificateRegistry,
+        university_address: address,
+        ctx: &mut TxContext
+    ) {
+        assert!(tx_context::sender(ctx) == registry.admin, ENotAuthorized);
+        table::add(&mut registry.authorized_universities, university_address, true);
+    }
+
+    // Check if university is authorized
+    public fun is_authorized_university(
+        registry: &CertificateRegistry,
+        university: address
+    ): bool {
+        table::contains(&registry.authorized_universities, university)
+    }
+
+    // Get total certificates count
+    public fun get_total_certificates(registry: &CertificateRegistry): u64 {
+        registry.total_certificates
+    }
+
+    // Mint certificate (university only)
+    public fun mint_certificate(
+        registry: &mut CertificateRegistry,
+        student_address: address,
+        credential_type: vector<u8>,
+        grade: Option<vector<u8>>,
+        clock: &clock::Clock,
+        ctx: &mut TxContext
+    ) {
         let sender = tx_context::sender(ctx);
-        assert!(sender == registry.admin, 0);  // Unauthorized
-        vec_map::insert(&mut registry.issuers, new_addr, metadata);
-        event::emit(NewIssuerAdded { addr: new_addr, metadata });  // Use fields
+        assert!(is_authorized_university(registry, sender), ENotAuthorizedUniversity);
+        assert!(!vector::is_empty(&credential_type), EInvalidCertificate);
+        assert!(student_address != @0x0, EInvalidCertificate);
+
+        let certificate_id = object::new(ctx);
+        let certificate = Certificate {
+            id: certificate_id,
+            student_address,
+            university: sender,
+            credential_type: credential_type,
+            issue_date: clock::timestamp_ms(clock),
+            walrus_evidence_blob: option::none(),
+            is_valid: true,
+            grade,
+        };
+
+        registry.total_certificates = registry.total_certificates + 1;
+
+        // Emit event
+        sui::event::emit(CertificateIssued {
+            certificate_id: object::uid_to_inner(&certificate.id),
+            student: student_address,
+            university: sender,
+            credential_type: credential_type,
+        });
+
+        transfer::transfer(certificate, student_address);
     }
 
-    public fun is_authorized_issuer(registry: &IssuerRegistry, addr: address): bool {
-        vec_map::contains(&registry.issuers, &addr)
-    }
-}
+    // Mint certificate with evidence (for on-demand minting)
+    public fun mint_with_evidence(
+        registry: &mut CertificateRegistry,
+        student_address: address,
+        credential_type: vector<u8>,
+        evidence_blob_id: vector<u8>,
+        grade: Option<vector<u8>>,
+        clock: &clock::Clock,
+        ctx: &mut TxContext
+    ) {
+        let sender = tx_context::sender(ctx);
+        assert!(is_authorized_university(registry, sender), ENotAuthorizedUniversity);
+        assert!(!vector::is_empty(&credential_type), EInvalidCertificate);
+        assert!(student_address != @0x0, EInvalidCertificate);
+        assert!(!vector::is_empty(&evidence_blob_id), EInvalidEvidence);
 
-module skillpass::education_passport {
-    // Passport NFT struct
-    // mint_passport function
-    // add_xp function
-    // verify_passport function
-    // XP tracking logic
+        let certificate_id = object::new(ctx);
+        let certificate = Certificate {
+            id: certificate_id,
+            student_address,
+            university: sender,
+            credential_type: credential_type,
+            issue_date: clock::timestamp_ms(clock),
+            walrus_evidence_blob: option::some(evidence_blob_id),
+            is_valid: true,
+            grade,
+        };
+
+        registry.total_certificates = registry.total_certificates + 1;
+
+        // Emit event
+        sui::event::emit(CertificateIssued {
+            certificate_id: object::uid_to_inner(&certificate.id),
+            student: student_address,
+            university: sender,
+            credential_type: credential_type,
+        });
+
+        transfer::transfer(certificate, student_address);
+    }
+
+    // Revoke certificate (issuing university only)
+    public fun revoke_certificate(
+        cert: &mut Certificate,
+        reason: vector<u8>,
+        ctx: &mut TxContext
+    ) {
+        let sender = tx_context::sender(ctx);
+        assert!(sender == cert.university, ENotAuthorizedUniversity);
+        
+        cert.is_valid = false;
+
+        // Emit event
+        sui::event::emit(CertificateRevoked {
+            certificate_id: object::uid_to_inner(&cert.id),
+            university: sender,
+            reason,
+        });
+    }
+
+    // Public verification function
+    public fun get_certificate_info(cert: &Certificate): (
+        address,      // student
+        address,      // university
+        vector<u8>,   // credential_type
+        u64,          // issue_date
+        bool          // is_valid
+    ) {
+        (
+            cert.student_address,
+            cert.university,
+            cert.credential_type,
+            cert.issue_date,
+            cert.is_valid
+        )
+    }
+
+    // Get evidence blob (for Walrus integration)
+    public fun get_evidence_blob(cert: &Certificate): Option<vector<u8>> {
+        cert.walrus_evidence_blob
+    }
+
+    // Get grade information
+    public fun get_grade(cert: &Certificate): Option<vector<u8>> {
+        cert.grade
+    }
 }
