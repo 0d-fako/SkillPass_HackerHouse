@@ -4,8 +4,8 @@
 
 ```typescript
 export const CONTRACT_CONFIG = {
-  PACKAGE_ID: "0xf1cb82954194f281b4bcddee3b8922b81322cd742d2ab23d169dfaf11883c736", // SEAL Enhanced
-  REGISTRY_ID: "0x6c0bab54d2c4ba3caba62063cb7e972370e60deb9dbbe2fd46f825897bde0bdd", // New Registry
+  PACKAGE_ID: "0xf1cb82954194f281b4bcddee3b8922b81322cd742d2ab23d169dfaf11883c736",
+  REGISTRY_ID: "0x6c0bab54d2c4ba3caba62063cb7e972370e60deb9dbbe2fd46f825897bde0bdd", 
   NETWORK: "https://fullnode.testnet.sui.io:443", 
   MODULE_NAME: "skillpass::certificate_registry",
   ADMIN_ADDRESS: "0x83b3e15b0f43aacdbd39ede604391ef9720df83b33420fb72deef7f8e795cbe9" 
@@ -13,7 +13,7 @@ export const CONTRACT_CONFIG = {
 ```
 
 ### 🚀 **Deployment Status - SEAL Enhanced:**
-- **Package ID**: ✅ **NEW VERSION DEPLOYED** with SEAL encryption
+- **Package ID**: with SEAL encryption
 - **Registry**: ✅ Created and Shared (New Registry ID)
 - **Network**: ✅ Sui Testnet
 - **Admin**: ✅ Set (Your Address)  
